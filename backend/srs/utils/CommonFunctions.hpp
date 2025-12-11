@@ -85,6 +85,12 @@ namespace srs::common
         return bin_val;
     }
 
+    template<typename T>
+    constexpr auto bin_to_gray(T bin_val)
+    {
+      return bin_val ^ (bin_val >> 1);
+    }
+
     constexpr auto get_shared_from_this(auto&& obj)
     {
         return std::static_pointer_cast<std::remove_cvref_t<decltype(obj)>>(obj.shared_from_this());
