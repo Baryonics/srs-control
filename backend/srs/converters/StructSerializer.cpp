@@ -1,9 +1,9 @@
 #include "StructSerializer.hpp"
 #include "srs/converters/DataConverterBase.hpp"
+#include "srs/data/SRSDataCompact.hpp"
 #include "srs/data/SRSDataStructs.hpp"
 #include "srs/utils/CommonAlias.hpp"
 #include "srs/utils/CommonDefinitions.hpp"
-#include "srs/data/SRSDataCompact.hpp"
 #include "srs/utils/CommonFunctions.hpp"
 #include <algorithm>
 #include <bitset>
@@ -23,10 +23,15 @@ namespace srs::process
     {
         void marker_to_compact(const MarkerData& marker_data, internal::MarkerDataCompact& marker_data_compact)
         {
-            auto timestamp_bits = std::bitset<common::SRS_TIMESTAMP_HIGH_BIT_LENGTH + common::SRS_TIMESTAMP_LOW_BIT_LENGTH>(marker_data.srs_timestamp);
-            auto timestamp_low_bits = std::bitset<common::SRS_TIMESTAMP_LOW_BIT_LENGTH>{};
-            auto timestamp_high_bits = std::bitset<common::SRS_TIMESTAMP_HIGH_BIT_LENGTH>{};
-            common::split_bits(timestamp_bits, timestamp_high_bits, timestamp_low_bits);
+            auto timestamp_bits =
+                std::bitset<common::SRS_TIMESTAMP_HIGH_BIT_LENGTH + common::SRS_TIMESTAMP_LOW_BIT_LENGTH>(
+                    marker_data.srs_timestamp);
+            auto [timestamp_low_bits, timestamp_high_bits] =
+                common::split_bits<common::SRS_TIMESTAMP_LOW_BIT_LENGTH>(timestamp_bits);
+            marker_data_compact.timestamp_low_bits =
+                static_cast<decltype(marker_data_compact.timestamp_low_bits)>(timestamp_low_bits.to_ulong());
+            marker_data_compact.timestamp_high_bits =
+                static_cast<decltype(marker_data_compact.timestamp_high_bits)>(timestamp_high_bits.to_ulong());
             marker_data_compact.flag = static_cast<decltype(marker_data_compact.flag)>(0);
             marker_data_compact.vmm_id = static_cast<decltype(marker_data_compact.vmm_id)>(marker_data.vmm_id);
         }
@@ -37,9 +42,10 @@ namespace srs::process
             hit_data_compact.flag = static_cast<decltype(hit_data_compact.flag)>(1);
             hit_data_compact.adc = static_cast<decltype(hit_data_compact.adc)>(hit_data.adc);
             hit_data_compact.bc_id = static_cast<decltype(hit_data_compact.bc_id)>(hit_data.bc_id);
-            hit_data_compact.bc_id = common::bin_to_gray(hit_data_compact.bc_id);
+            hit_data_compact.bc_id = common::binary_to_gray(hit_data_compact.bc_id);
             hit_data_compact.channel_num = static_cast<decltype(hit_data_compact.channel_num)>(hit_data.channel_num);
-            hit_data_compact.is_over_threshold = static_cast<decltype(hit_data_compact.is_over_threshold)>(hit_data.is_over_threshold);
+            hit_data_compact.is_over_threshold =
+                static_cast<decltype(hit_data_compact.is_over_threshold)>(hit_data.is_over_threshold);
             hit_data_compact.offset = static_cast<decltype(hit_data_compact.offset)>(hit_data.offset);
         }
     }; // namespace
