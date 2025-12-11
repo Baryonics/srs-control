@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <format>
+#include <iterator>
 #include <magic_enum/magic_enum.hpp>
 #include <string>
 #include <string_view>
@@ -46,6 +47,21 @@ namespace srs::common
         auto low_bits_part = NewBit(low_bits.to_ullong());
         auto new_bits = (high_bits_part << low_size) | low_bits_part;
         return std::bitset<high_size + low_size>(new_bits.to_ullong());
+    }
+
+    template <std::size_t high_size, std::size_t low_size>
+    constexpr void split_bits(const std::bitset<high_size + low_size>& bits, std::bitset<low_size>& low_bits, std::bitset<high_size>& high_bits) 
+    {
+        constexpr auto max_size = 64; 
+        static_assert(max_size >= bits.size() || bits.size() == low_size+high_size);
+        for (auto i{0}; i<= low_size-1; i++)
+        {
+            low_bits[i] = bits[i];
+        }
+        for (auto j{low_size}; j <= high_size; j++)
+        {
+            high_bits[j] = bits[j];
+        }
     }
 
     template <std::size_t bit_size>
