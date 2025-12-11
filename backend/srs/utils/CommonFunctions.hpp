@@ -50,17 +50,17 @@ namespace srs::common
     }
 
     template <std::size_t high_size, std::size_t low_size>
-    constexpr void split_bits(const std::bitset<high_size + low_size>& bits, std::bitset<low_size>& low_bits, std::bitset<high_size>& high_bits) 
+    constexpr void split_bits(const std::bitset<high_size + low_size>& bits, std::bitset<high_size>& high_bits, std::bitset<low_size>& low_bits) 
     {
         constexpr auto max_size = 64; 
-        static_assert(max_size >= bits.size() || bits.size() == low_size+high_size);
-        for (auto i{0}; i<= low_size-1; i++)
+        static_assert(high_size + low_size <= max_size);
+        for (auto i{0UZ}; i < low_size; i++)
         {
             low_bits[i] = bits[i];
         }
-        for (auto j{low_size}; j <= high_size; j++)
+        for (auto j{low_size}; j < high_size; j++)
         {
-            high_bits[j] = bits[j];
+            high_bits[j] = bits[low_size + j];
         }
     }
 
