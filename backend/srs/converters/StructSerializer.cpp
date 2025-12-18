@@ -2,10 +2,8 @@
 #include "srs/converters/DataConverterBase.hpp"
 #include "srs/data/SRSDataCompact.hpp"
 #include "srs/data/SRSDataStructs.hpp"
-#include "srs/utils/CommonAlias.hpp"
 #include "srs/utils/CommonDefinitions.hpp"
 #include "srs/utils/CommonFunctions.hpp"
-#include <algorithm>
 #include <array>
 #include <bit>
 #include <bitset>
@@ -15,7 +13,6 @@
 #include <cstdint>
 #include <expected>
 #include <spdlog/spdlog.h>
-#include <stdexcept>
 #include <string_view>
 #include <type_traits>
 #include <vector>
@@ -38,14 +35,15 @@ namespace srs::process
         auto marker_to_compact(const MarkerData& marker_data, internal::MarkerDataCompact& marker_data_compact)
             -> std::expected<void, std::string_view>
         {
-            auto is_correct_sizes = check_compact_max_size(marker_data.vmm_id, internal::VMM_ID_BIT_LENGTH)
-                                        .and_then(
-                                            [&]
-                                            {
-                                                return check_compact_max_size(marker_data.srs_timestamp,
-                                                                              common::SRS_TIMESTAMP_HIGH_BIT_LENGTH +
-                                                                                  common::SRS_TIMESTAMP_LOW_BIT_LENGTH);
-                                            });
+            auto is_correct_sizes =
+                check_compact_max_size(marker_data.vmm_id, internal::VMM_ID_BIT_LENGTH)
+                    .and_then(
+                        [&]
+                        {
+                            return check_compact_max_size(
+                                marker_data.srs_timestamp,
+                                common::SRS_TIMESTAMP_LOW_BIT_LENGTH + common::SRS_TIMESTAMP_HIGH_BIT_LENGTH);
+                        });
             if (!is_correct_sizes)
             {
                 return std::unexpected(is_correct_sizes.error());
@@ -67,25 +65,15 @@ namespace srs::process
         auto hit_to_compact(const HitData& hit_data, internal::HitDataCompact& hit_data_compact)
             -> std::expected<void, std::string_view>
         {
-            if (hit_data.channel_num >= 1U << internal::CHANNEL_NUM_BIT_LENGTH)
+            auto is_correct_sizes =
+                check_compact_max_size(hit_data.channel_num, internal::CHANNEL_NUM_BIT_LENGTH)
+                    .and_then([&] { return check_compact_max_size(hit_data.bc_id, internal::BC_ID_BIT_LENGTH); })
+                    .and_then([&] { return check_compact_max_size(hit_data.adc, internal::ADC_BIT_LENGTH); })
+                    .and_then([&] { return check_compact_max_size(hit_data.vmm_id, internal::VMM_ID_BIT_LENGTH); })
+                    .and_then([&] { return check_compact_max_size(hit_data.offset, internal::OFFSET_BIT_LENGTH); });
+            if (!is_correct_sizes)
             {
-                return std::unexpected("Serialization: channel_num exceeding size limit!");
-            }
-            if (hit_data.bc_id >= 1U << internal::BC_ID_BIT_LENGTH)
-            {
-                return std::unexpected("Serialization: bc_id exceeding size limit!");
-            }
-            if (hit_data.adc >= 1U << internal::ADC_BIT_LENGTH)
-            {
-                return std::unexpected("Serialization: adc exceeding size limit!");
-            }
-            if (hit_data.vmm_id >= 1U << internal::VMM_ID_BIT_LENGTH)
-            {
-                return std::unexpected("Serialization: vmm_id exceeding size limit!");
-            }
-            if (hit_data.offset >= 1U << internal::OFFSET_BIT_LENGTH)
-            {
-                return std::unexpected("Serialization: offset exceeding size limit!");
+                return std::unexpected(is_correct_sizes.error());
             }
             hit_data_compact.vmm_id = static_cast<decltype(hit_data_compact.vmm_id)>(hit_data.vmm_id);
             hit_data_compact.flag = static_cast<decltype(hit_data_compact.flag)>(1);
