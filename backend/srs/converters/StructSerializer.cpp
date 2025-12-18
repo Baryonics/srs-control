@@ -25,17 +25,30 @@ namespace srs::process
 {
     namespace
     {
+        template <class T>
+        auto check_compact_max_size(const T& value, size_t length) -> std::expected<void, std::string_view>
+        {
+            if (value >= 1U << length)
+            {
+                return std::unexpected("Serialization: exceeding size limit!");
+            }
+            return {};
+        }
+
         auto marker_to_compact(const MarkerData& marker_data, internal::MarkerDataCompact& marker_data_compact)
             -> std::expected<void, std::string_view>
         {
-            if (marker_data.vmm_id >= (1U << internal::VMM_ID_BIT_LENGTH))
+            auto is_correct_sizes = check_compact_max_size(marker_data.vmm_id, internal::VMM_ID_BIT_LENGTH)
+                                        .and_then(
+                                            [&]
+                                            {
+                                                return check_compact_max_size(marker_data.srs_timestamp,
+                                                                              common::SRS_TIMESTAMP_HIGH_BIT_LENGTH +
+                                                                                  common::SRS_TIMESTAMP_LOW_BIT_LENGTH);
+                                            });
+            if (!is_correct_sizes)
             {
-                return std::unexpected("Serialization: vmm_id exceeding size limit!");
-            }
-            if (marker_data.srs_timestamp >
-                1ULL << (common::SRS_TIMESTAMP_LOW_BIT_LENGTH + common::SRS_TIMESTAMP_HIGH_BIT_LENGTH))
-            {
-                return std::unexpected("Serialization: timestamp exceeding size limit!");
+                return std::unexpected(is_correct_sizes.error());
             }
             auto timestamp_bits =
                 std::bitset<common::SRS_TIMESTAMP_HIGH_BIT_LENGTH + common::SRS_TIMESTAMP_LOW_BIT_LENGTH>(
