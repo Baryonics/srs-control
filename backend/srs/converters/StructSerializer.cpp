@@ -92,7 +92,8 @@ namespace srs::process
                      std::same_as<std::remove_cvref_t<T>, internal::MarkerDataCompact>)
         auto compact_to_vector(const T& compact_data) -> std::vector<char>
         {
-            auto compact_bitset = std::bitset<sizeof(std::uint64_t)>{ std::bit_cast<uint64_t>(compact_data) };
+            auto compact_bitset =
+                std::bitset<sizeof(std::uint64_t) * common::BYTE_BIT_LENGTH>{ std::bit_cast<uint64_t>(compact_data) };
             auto output = std::vector<char>{};
             output.resize(sizeof(std::uint64_t) / common::BYTE_BIT_LENGTH);
             auto write_to_output = zpp::bits::out{ output, zpp::bits::endian::network{}, zpp::bits::no_size{} };
