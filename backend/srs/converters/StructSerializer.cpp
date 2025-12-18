@@ -25,8 +25,18 @@ namespace srs::process
 {
     namespace
     {
-        void marker_to_compact(const MarkerData& marker_data, internal::MarkerDataCompact& marker_data_compact)
+        auto marker_to_compact(const MarkerData& marker_data, internal::MarkerDataCompact& marker_data_compact)
+            -> std::expected<void, std::string_view>
         {
+            if (marker_data.vmm_id >= (1U << internal::VMM_ID_BIT_LENGTH))
+            {
+                return std::unexpected("Serialization: vmm_id exceeding size limit!");
+            }
+            if (marker_data.srs_timestamp >
+                1ULL << (common::SRS_TIMESTAMP_LOW_BIT_LENGTH + common::SRS_TIMESTAMP_HIGH_BIT_LENGTH))
+            {
+                return std::unexpected("Serialization: timestamp exceeding size limit!");
+            }
             auto timestamp_bits =
                 std::bitset<common::SRS_TIMESTAMP_HIGH_BIT_LENGTH + common::SRS_TIMESTAMP_LOW_BIT_LENGTH>(
                     marker_data.srs_timestamp);
@@ -38,10 +48,32 @@ namespace srs::process
                 static_cast<decltype(marker_data_compact.timestamp_high_bits)>(timestamp_high_bits.to_ulong());
             marker_data_compact.flag = static_cast<decltype(marker_data_compact.flag)>(0);
             marker_data_compact.vmm_id = static_cast<decltype(marker_data_compact.vmm_id)>(marker_data.vmm_id);
+            return {};
         }
 
-        void hit_to_compact(const HitData& hit_data, internal::HitDataCompact& hit_data_compact)
+        auto hit_to_compact(const HitData& hit_data, internal::HitDataCompact& hit_data_compact)
+            -> std::expected<void, std::string_view>
         {
+            if (hit_data.channel_num >= 1U << internal::CHANNEL_NUM_BIT_LENGTH)
+            {
+                return std::unexpected("Serialization: channel_num exceeding size limit!");
+            }
+            if (hit_data.bc_id >= 1U << internal::BC_ID_BIT_LENGTH)
+            {
+                return std::unexpected("Serialization: bc_id exceeding size limit!");
+            }
+            if (hit_data.adc >= 1U << internal::ADC_BIT_LENGTH)
+            {
+                return std::unexpected("Serialization: adc exceeding size limit!");
+            }
+            if (hit_data.vmm_id >= 1U << internal::VMM_ID_BIT_LENGTH)
+            {
+                return std::unexpected("Serialization: vmm_id exceeding size limit!");
+            }
+            if (hit_data.offset >= 1U << internal::OFFSET_BIT_LENGTH)
+            {
+                return std::unexpected("Serialization: offset exceeding size limit!");
+            }
             hit_data_compact.vmm_id = static_cast<decltype(hit_data_compact.vmm_id)>(hit_data.vmm_id);
             hit_data_compact.flag = static_cast<decltype(hit_data_compact.flag)>(1);
             hit_data_compact.adc = static_cast<decltype(hit_data_compact.adc)>(hit_data.adc);
@@ -51,6 +83,7 @@ namespace srs::process
             hit_data_compact.is_over_threshold =
                 static_cast<decltype(hit_data_compact.is_over_threshold)>(hit_data.is_over_threshold);
             hit_data_compact.offset = static_cast<decltype(hit_data_compact.offset)>(hit_data.offset);
+            return {};
         }
 
         template <class T>
@@ -82,13 +115,19 @@ namespace srs::process
         for (auto hit : input->hit_data)
         {
             auto hit_compact = internal::HitDataCompact{};
-            hit_to_compact(hit, hit_compact);
+            if (auto r = hit_to_compact(hit, hit_compact); !r)
+            {
+                return std::unexpected(r.error());
+            }
             serialize_to(compact_to_vector(hit_compact)).or_throw();
         }
         for (auto marker : input->marker_data)
         {
             auto marker_compact = internal::MarkerDataCompact{};
-            marker_to_compact(marker, marker_compact);
+            if (auto r = marker_to_compact(marker, marker_compact); !r)
+            {
+                return std::unexpected(r.error());
+            }
             serialize_to(compact_to_vector(marker_compact)).or_throw();
         }
         return input->marker_data.size() + input->hit_data.size();
