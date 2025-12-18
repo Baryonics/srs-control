@@ -71,7 +71,7 @@ namespace
 
 TEST(data_structure, check_de_serialization)
 {
-    auto random_data = generate_random_struct_data();
+    const auto random_data = generate_random_struct_data();
 
     auto serializer_converter = process::StructSerializer();
     auto deserializer_converter = process::StructDeserializer();
@@ -84,4 +84,5 @@ TEST(data_structure, check_de_serialization)
     EXPECT_TRUE(res.has_value());
     auto struct_data = deserializer_converter.run(serializer_converter);
     EXPECT_TRUE(struct_data.has_value());
+    EXPECT_TRUE(random_data == *struct_data.value());
 }
